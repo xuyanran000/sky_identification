@@ -14,10 +14,11 @@ def calculate_gradient(img_blurred):
     # calculates the Laplacian gradient of a blurred image to detect edges
     laplacian = cv2.Laplacian(img_blurred, cv2.CV_8U)
     gradient_mask = (laplacian < 6).astype(np.uint8)
-    return gradient_mask
+    return gradient_mask # the resulting gradient image is thresholded to create a binary mask that represents potential sky regions as areas with lower gradient values (less change in intensity).
 
 def refine_skyline(mask):
     # refines the sky detection using median filtering and morphological operations
+    # erosion shrinks bright regions and enlarges dark regions, which can help disconnect the sky from other objects. 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 3))
     eroded_mask = cv2.morphologyEx(mask, cv2.MORPH_ERODE, kernel)
     skyline_mask = cal_skyline(eroded_mask)
@@ -25,6 +26,9 @@ def refine_skyline(mask):
 
 def cal_skyline(mask):
     # adjusts the skyline in the mask based on median filtering to isolate the sky
+    # for each column of the mask, this function applies median filtering to create a smooth transition of values, which is particularly useful for identifying the skyline.
+    # it then locates the transition from sky to non-sky by finding the first occurrence of a white pixel followed by a black pixel after the median filtering.
+    # this creates a more defined and clean skyline by setting the appropriate pixel values above and below this transition.
     h, w = mask.shape
     for i in range(w):
         column = mask[:, i]
@@ -36,7 +40,7 @@ def cal_skyline(mask):
                 mask[:first_black_index, i] = 1
                 mask[first_black_index:, i] = 0
         except IndexError:
-            continue
+            continue # this handles the case where a column may be all sky or no sky at all.
     return mask
 
 def get_sky_region(image, mask):
